@@ -29,6 +29,13 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Consulta todas as músicas registadas na base de dados e exibe suas informações, incluindo
+     * o título, data de lançamento, autor, álbum e faixa. Caso algum campo seja nulo, informações
+     * padrão como "s/album" ou campos vazios são usadas.
+     *
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados durante a execução da consulta.
+     */
     public void consultarMusicas() throws SQLException {
         /*SELECT titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
                 "coalesce(numero_ordem.numero::text, '') as faixa\n" +
@@ -51,6 +58,19 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Adiciona uma nova música a base de dados. A operação inclui inserir informações
+     * sobre o título da música, data de lançamento, autor, gênero, álbum e número da faixa.
+     * Caso o autor, genero ou álbum não existam na base de dados, eles são criados automaticamente.
+     *
+     * @param titulo O título da música a ser adicionada.
+     * @param dataLancamento A data de lançamento da música, no formato esperado pela base de dados.
+     * @param autor O nome do autor da música. Se o autor não existir, ele será criado.
+     * @param genero O género da música. Caso o género não exista, ele será criado.
+     * @param album O nome do álbum ao qual a música pertence. Se o nome estiver vazio, considera-se que não há álbum associado.
+     * @param numFaixa O número da faixa na listagem do álbum. Se for -1, considera-se que não há álbum associado.
+     * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da operação.
+     */
     public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
         boolean existeAutor = verificarAutorExiste(autor);
         boolean existeGenero = verificarGeneroExiste(genero);
@@ -88,7 +108,14 @@ public class App implements AutoCloseable {
         }
     }
 
-    //Faixa
+    /**
+     * Verifica se uma faixa específica dentro de um álbum existe na base de dados.
+     *
+     * @param albumNome O nome do álbum no qual a faixa será verificada.
+     * @param faixaNum O número da faixa a ser verificada no álbum.
+     * @return true se a faixa existir no álbum especificado, false caso contrário.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
+     */
     public boolean verificarSeFaixaExiste(String albumNome, int faixaNum) throws SQLException {
         //Verificar se a faixa já está tomada
         //select *
@@ -98,7 +125,13 @@ public class App implements AutoCloseable {
 
     }
 
-    //Album
+    /**
+     * Verifica se existe um álbum com o nome fornecido no base de dados.
+     *
+     * @param nomeAlbum O nome do álbum cuja existência deve ser verificada.
+     * @return true se o álbum existir, false caso contrário.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
+     */
     public boolean verificarAlbumExiste(String nomeAlbum) throws SQLException {
         String sql = "SELECT * FROM album WHERE nome LIKE (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -113,6 +146,12 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Cria um álbum na base de dados com o nome especificado, caso ele ainda não exista.
+     *
+     * @param albumNome O nome do álbum a ser criado.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
+     */
     public void criarAlbum(String albumNome) throws SQLException {
         if (!verificarAutorExiste(albumNome)) {
             String sql = "INSERT INTO album (nome) VALUES(?);";
@@ -129,7 +168,13 @@ public class App implements AutoCloseable {
     }
 
 
-    //Autor
+    /**
+     * Verifica se existe um autor com o nome fornecido na base de dados.
+     *
+     * @param nomeAutor O nome do autor cuja existência deve ser verificada.
+     * @return true se o autor existir, false caso contrário.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
+     */
     public boolean verificarAutorExiste(String nomeAutor) throws SQLException {
         String sql = "SELECT * FROM autor WHERE nome LIKE (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -144,6 +189,12 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Cria um novo autor na base de dados com o nome especificado, caso ele ainda não exista.
+     *
+     * @param autorNome O nome do autor a ser criado.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
+     */
     public void criarAutor(String autorNome) throws SQLException {
         if (!verificarAutorExiste(autorNome)) {
             String sql = "INSERT INTO autor (nome) VALUES(?);";
@@ -159,7 +210,13 @@ public class App implements AutoCloseable {
         }
     }
 
-    //Genero
+    /**
+     * Verifica se um genero com o nome especificado existe na base de dados.
+     *
+     * @param generoNome O nome do gênero cuja existência deve ser verificada.
+     * @return true se o gênero existir, false caso contrário.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
+     */
     public boolean verificarGeneroExiste(String generoNome) throws SQLException {
         String sql = "SELECT * FROM genero WHERE nome LIKE (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -174,6 +231,12 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Cria um genero na base de dados com o nome especificado, caso ele ainda não exista.
+     *
+     * @param generoNome O nome do genero a ser criado.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados durante a execução da operação.
+     */
     public void criarGenero(String generoNome) throws SQLException {
         if (!verificarGeneroExiste(generoNome)) {
             String sql = "INSERT INTO genero(nome) VALUES(?);";
@@ -189,7 +252,12 @@ public class App implements AutoCloseable {
         }
     }
 
-
+    /**
+     * Fecha a conexão com a base de dados associada a esta instância.
+     * Caso a conexão não seja nula, ela será fechada para libertar recursos do banco de dados.
+     *
+     * @throws SQLException Se ocorrer um erro ao tentar fechar a conexão.
+     */
     @Override
     public void close() throws SQLException {
         if (this.conn != null) {
