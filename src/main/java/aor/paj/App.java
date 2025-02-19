@@ -14,7 +14,6 @@ public class App implements AutoCloseable {
     }
 
     private void queryEmployees() throws SQLException {
-        //String sql = "SELECT * FROM musica WHERE ndep = ? or ndep= ?";
 
         String sql = "SELECT * FROM musica inner join autor on musica.autor_nome=autor.nome WHERE nome LIKE ('John Lennon')";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -30,6 +29,104 @@ public class App implements AutoCloseable {
         }
     }
 
+    public void consultarMusicas() throws SQLException {
+        /*SELECT titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
+                "coalesce(numero_ordem.numero::text, '') as faixa\n" +
+                "FROM musica\n" +
+                "left outer join numero_ordem on musica.identificador = numero_ordem.musica_identificador*/
+
+        String sql = "SELECT titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
+                "coalesce(numero_ordem.numero::text, '') as faixa\n" +
+                "FROM musica\n" +
+                "left outer join numero_ordem on musica.identificador = numero_ordem.musica_identificador";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            try (ResultSet rs1 = stm.executeQuery()) {
+                while (rs1.next()) {
+                    System.out.println(" Título: " + rs1.getString("titulo") + " Data de Lançamento:"
+                            + rs1.getString("lancamento") + " Autor:"
+                            + rs1.getString("autor") + " Album: " + rs1.getString("album") +
+                            " Faixa: " + rs1.getString("faixa"));
+                }
+            }
+        }
+    }
+
+    public void adicionarMusicaComAlbum(String titulo, String dataLancamento, String autor, String genero, String album, int faixa) throws SQLException {
+
+
+
+
+        String sql = "INSERT INTO autor (nome) VALUES\n" +
+                "('Xutos e Pontapés');\n" +
+                "\n" +
+                "INSERT INTO musica (identificador, titulo, data_criacao, autor_nome) \n" +
+                "values (nextval('identificadores_musica'), 'A minha casinha', '1987-02-02', 'Xutos e Pontapés');\n" +
+                "\n" +
+                "\n" +
+                "INSERT INTO musica_genero (musica_identificador, genero_nome) \n" +
+                "VALUES ((SELECT identificador \n" +
+                "FROM musica \n" +
+                "WHERE titulo = 'A minha casinha'),'Rock')";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            //stm.setInt(1, 30);
+            //stm.setInt(2, 20);
+            try (ResultSet rs1 = stm.executeQuery()) {
+                while (rs1.next()) {
+                    System.out.println("ID: " + rs1.getString("identificador") + " Título: " + rs1.getString("titulo") + " Data:"
+                            + rs1.getString("data_criacao") + " Autor:"
+                            + rs1.getString("autor_nome"));
+                }
+            }
+        }
+    }
+
+    public void adicionarMusicaSemAlbum(String titulo, String dataLancamento, String autor, String genero, String album, int faixa) throws SQLException {
+
+
+
+        String sql = "INSERT INTO autor (nome) VALUES\n" +
+                "('Xutos e Pontapés');\n" +
+                "\n" +
+                "INSERT INTO musica (identificador, titulo, data_criacao, autor_nome) \n" +
+                "values (nextval('identificadores_musica'), 'A minha casinha', '1987-02-02', 'Xutos e Pontapés');\n" +
+                "\n" +
+                "\n" +
+                "INSERT INTO musica_genero (musica_identificador, genero_nome) \n" +
+                "VALUES ((SELECT identificador \n" +
+                "FROM musica \n" +
+                "WHERE titulo = 'A minha casinha'),'Rock')";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            //stm.setInt(1, 30);
+            //stm.setInt(2, 20);
+            try (ResultSet rs1 = stm.executeQuery()) {
+                while (rs1.next()) {
+                    System.out.println("ID: " + rs1.getString("identificador") + " Título: " + rs1.getString("titulo") + " Data:"
+                            + rs1.getString("data_criacao") + " Autor:"
+                            + rs1.getString("autor_nome"));
+                }
+            }
+        }
+    }
+
+    //Autor
+    public void criarAutor(){
+
+    }
+
+    public boolean verificarAutorExiste(String nomeAutor) throws SQLException {
+        String sql = "SELECT * FROM autor WHERE nome LIKE ('"+nomeAutor+"')";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            try (ResultSet rs = stm.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    return false;
+                }
+                else {
+                    return true;
+                }
+            }
+        }
+    }
+
     @Override
     public void close() throws SQLException {
         if (this.conn != null) {
@@ -37,70 +134,5 @@ public class App implements AutoCloseable {
         }
     }
 
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        menuPrincipal(sc);
-        //printLogo();
 
-        try (App app = new App()) {
-            app.queryEmployees();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void printLogo() {
-        System.out.println("╔═════════════════════════════════════════════════════════════════════════════════════════════════════════╗");
-        System.out.println("║   d888888o.       ,o888888o.     b.             8      ,o888888o.        ,o888888o.      8 8888         ║");
-        System.out.println("║ .`8888:' `88.  . 8888     `88.   888o.          8     8888     `88.   . 8888     `88.    8 8888         ║");
-        System.out.println("║ 8.`8888.   Y8 ,8 8888       `8b  Y88888o.       8  ,8 8888       `8. ,8 8888       `8b   8 8888         ║");
-        System.out.println("║ `8.`8888.     88 8888        `8b .`Y888888o.    8  88 8888           88 8888        `8b  8 8888         ║");
-        System.out.println("║  `8.`8888.    88 8888         88 8o. `Y888888o. 8  88 8888           88 8888         88  8 8888         ║");
-        System.out.println("║   `8.`8888.   88 8888         88 8`Y8o. `Y88888o8  88 8888           88 8888     `8. 88  8 8888         ║");
-        System.out.println("║    `8.`8888.  88 8888        ,8P 8   `Y8o. `Y8888  88 8888   8888888 88 8888      `8,8P  8 8888         ║");
-        System.out.println("║8b   `8.`8888. `8 8888       ,8P  8      `Y8o. `Y8  `8 8888       .8' `8 8888       ;8P   8 8888         ║");
-        System.out.println("║`8b.  ;8.`8888  ` 8888     ,88'   8         `Y8o.`     8888     ,88'   ` 8888     ,88'8.  8 8888         ║");
-        System.out.println("║ `Y8888P ,88P'     `8888888P'     8            `Yo      `8888888P'        `8888888P'  `8. 8 888888888888 ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════╝");
-    }
-
-
-    private static void menuPrincipal(Scanner sc) {
-        String opcaoStr = "";
-        int opcao = -1;
-        boolean seValido = false;
-        do {
-            System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
-            System.out.println("║                      O que pretende fazar?                        ║");
-            System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
-            System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
-            System.out.println("║ 1. Consultar uma música                                           ║");
-            System.out.println("║ 2. Adicionar uma música                                           ║");
-            System.out.println("║ 3. Alterar o título de uma música                                 ║");
-            System.out.println("║ 4. Remover uma música                                             ║");
-            System.out.println("║ 5. Criar uma playlist                                             ║");
-            System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
-            opcaoStr = sc.nextLine();
-            if(ValidacaoInput.validar(opcaoStr, 1, 5)) {
-                opcao = Integer.parseInt(opcaoStr);
-                seValido = true;
-            }
-            else{
-                System.out.println("Escolha inválida. Escolha uma opção entre 1 e 5.");
-            }
-        }
-        while(!seValido);
-        switch (opcao) {
-            case 1:
-        }
-        }
-
-        private static void menuConsultarMusica() {
-            String opcaoStr = "";
-            int opcao = -1;
-            boolean seValido = false;
-
-
-
-        }
 }
