@@ -38,7 +38,9 @@ public class App implements AutoCloseable {
     }
 
     public static void main(String[] args) {
-        printLogo();
+        Scanner sc = new Scanner(System.in);
+        menuPrincipal(sc);
+        //printLogo();
 
         try (App app = new App()) {
             app.queryEmployees();
@@ -63,7 +65,7 @@ public class App implements AutoCloseable {
     }
 
 
-    private static void menu(Scanner sc) {
+    private static void menuPrincipal(Scanner sc) {
         String opcaoStr = "";
         int opcao = -1;
         boolean seValido = false;
@@ -91,5 +93,14 @@ public class App implements AutoCloseable {
         switch (opcao) {
             case 1:
         }
+        }
+
+        private static void menuConsultarMusica() {
+            String opcaoStr = "";
+            int opcao = -1;
+            boolean seValido = false;
+
+
+
         }
 }
