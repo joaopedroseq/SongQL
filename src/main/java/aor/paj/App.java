@@ -302,6 +302,65 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         }
 
     /**
+     * Atualiza o título de uma música existente na base de dados com base no identificador fornecido.
+     *
+     * @param identificador O identificador único da música cujo título será atualizado.
+     * @param novoTitulo O novo título a ser atribuído à música.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
+     */
+    public void atualizarTituloMusica(long identificador, String novoTitulo) throws SQLException {
+        String sql = "UPDATE musica SET titulo = ? WHERE identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, novoTitulo);
+            stm.setLong(2, identificador);
+            int linhasAtualizadas = stm.executeUpdate();
+            if (linhasAtualizadas == 0) {
+                System.out.println("Música não encontrada ou título não atualizado.");
+            } else {
+                System.out.println("Título atualizado com sucesso.");
+            }
+        }
+    }
+
+    /**
+     * Remove uma música da base de dados, incluindo todos os registos associados
+     * nas tabelas musica_genero e faixa, e por fim, o registo da tabela musica.
+     *
+     * @param identificador O identificador único da música que será removida da base de dados.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução das operações de remoção.
+     */
+    public void removerMusica(long identificador) throws SQLException {
+
+        String sqlGenero = "DELETE FROM musica_genero WHERE musica_identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlGenero)) {
+            stm.setLong(1, identificador);
+            stm.executeUpdate();
+        }
+
+        String sqlFaixa = "DELETE FROM faixa WHERE musica_identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlFaixa)) {
+            stm.setLong(1, identificador);
+            stm.executeUpdate();
+        }
+
+        String sqlMusica = "DELETE FROM musica WHERE identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlMusica)) {
+            stm.setLong(1, identificador);
+            int linhasAtualizadas = stm.executeUpdate();
+            if (linhasAtualizadas == 0) {
+                System.out.println("Música não encontrada ou não removida.");
+            } else {
+                System.out.println("Música removida com sucesso.");
+            }
+        }
+    } // Falta a parte de remover o album se estiver vazio
+
+    public void obterPlaylist(  String generoPlaylist, int numMusicas) throws SQLException {
+
+    }
+
+
+    /**
      * Fecha a conexão com a base de dados associada a esta instância.
      * Caso a conexão não seja nula, ela será fechada para libertar recursos do banco de dados.
      *
@@ -315,14 +374,13 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
     }
 
 
-
-    private static void menuPrincipal(Scanner sc) {
+    private static void menuPrincipal(Scanner sc, App app) {
         String opcaoStr = "";
         int opcao = -1;
         boolean seValido = false;
         do {
             System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
-            System.out.println("║                      O que pretende fazar?                        ║");
+            System.out.println("║                      O que pretende fazer?                        ║");
             System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
             System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
             System.out.println("║ 1. Consultar músicas                                              ║");
@@ -332,19 +390,78 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
             System.out.println("║ 5. Criar uma playlist                                             ║");
             System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
             opcaoStr = sc.nextLine();
-            if(ValidacaoInput.validar(opcaoStr, 1, 5)) {
+            if (ValidacaoInput.validar(opcaoStr, 1, 5)) {
                 opcao = Integer.parseInt(opcaoStr);
                 seValido = true;
-            }
-            else{
+            } else {
                 System.out.println("Escolha inválida. Escolha uma opção entre 1 e 5.");
             }
-        }
-        while(!seValido);
+        } while (!seValido);
+
         switch (opcao) {
             case 1:
+                try {
+                    app.consultarMusicas();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case 2:
+                System.out.println("Digite o título da música:");
+                String titulo = sc.nextLine();
+                System.out.println("Digite a data de criação (YYYY-MM-DD):");
+                String dataLancamento = sc.nextLine();
+                System.out.println("Digite o nome do autor:");
+                String autor = sc.nextLine();
+                System.out.println("Digite o género musical:");
+                String genero = sc.nextLine();
+                System.out.println("Digite o nome do álbum (ou deixe em branco):");
+                String album = sc.nextLine();
+                System.out.println("Digite o número da faixa (ou -1 se não houver):");
+                int numFaixa = Integer.parseInt(sc.nextLine());
+                try {
+                    app.adicionarMusica(titulo, dataLancamento, autor, genero, album, numFaixa);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case 3:
+                System.out.println("Digite o identificador da música que deseja alterar:");
+                long idMusica = Long.parseLong(sc.nextLine());
+                System.out.println("Digite o novo título da música:");
+                String novoTitulo = sc.nextLine();
+                try {
+                    app.atualizarTituloMusica(idMusica, novoTitulo);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case 4:
+                System.out.println("Digite o identificador da música que deseja remover:");
+                long idRemover = Long.parseLong(sc.nextLine());
+                try {
+                    app.removerMusica(idRemover);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case 5:
+                System.out.println("Digite o género musical para a playlist:");
+                String generoPlaylist = sc.nextLine();
+                System.out.println("Digite o número de músicas para a playlist:");
+                int numMusicas = Integer.parseInt(sc.nextLine());
+                try {
+                    app.obterPlaylist(generoPlaylist, numMusicas);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                break;
+            default:
+                System.out.println("Opção inválida.");
         }
     }
+
+
 
     private static void printLogo() {
         System.out.println("╔═════════════════════════════════════════════════════════════════════════════════════════════════════════╗");
