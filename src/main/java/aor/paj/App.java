@@ -269,6 +269,22 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         }
     }
 
+
+    public void atualizarTituloMusica(long identificador, String novoTitulo) throws SQLException {
+        String sql = "UPDATE musica SET titulo = ? WHERE identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, novoTitulo);
+            stm.setLong(2, identificador);
+            int linhasAtualizadas = stm.executeUpdate();
+            if (linhasAtualizadas == 0) {
+                System.out.println("Música não encontrada ou título não atualizado.");
+            } else {
+                System.out.println("Título atualizado com sucesso.");
+            }
+        }
+    }
+
+
     /**
      * Fecha a conexão com a base de dados associada a esta instância.
      * Caso a conexão não seja nula, ela será fechada para libertar recursos do banco de dados.
