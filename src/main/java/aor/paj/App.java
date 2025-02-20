@@ -37,15 +37,15 @@ public class App implements AutoCloseable {
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados durante a execução da consulta.
      */
     public void consultarMusicas() throws SQLException {
-        /*SELECT titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
-                "coalesce(numero_ordem.numero::text, '') as faixa\n" +
-                "FROM musica\n" +
-                "left outer join numero_ordem on musica.identificador = numero_ordem.musica_identificador*/
+        /*SELECT identificador as id, titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,
+coalesce(faixa.num_faixa::text, '') as faixa
+FROM musica
+left outer join faixa on musica.identificador = faixa.musica_identificador*/
 
-        String sql = "SELECT musica.identificador as id, titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
-                "coalesce(numero_ordem.numero::text, '') as faixa\n" +
+        String sql = "SELECT identificador as id, titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
+                "coalesce(faixa.num_faixa::text, '') as faixa\n" +
                 "FROM musica\n" +
-                "left outer join numero_ordem on musica.identificador = numero_ordem.musica_identificador";
+                "left outer join faixa on musica.identificador = faixa.musica_identificador";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             try (ResultSet rs1 = stm.executeQuery()) {
                 while (rs1.next()) {
@@ -71,22 +71,33 @@ public class App implements AutoCloseable {
      * @param numFaixa O número da faixa na listagem do álbum. Se for -1, considera-se que não há álbum associado.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da operação.
      */
-    public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
+    /*public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
         boolean existeAutor = verificarAutorExiste(autor);
         boolean existeGenero = verificarGeneroExiste(genero);
-        boolean temAlbum = true;
+        boolean existeAlbum;
+        boolean musicaComAlbum = true;
 
         if (album.equals("") && numFaixa == -1) {
-            temAlbum = false;
+            musicaComAlbum = false;
         }
-
+        else{
+            if(verificarAlbumExiste(album)) {
+                existeAlbum = true;
+                if (verificarSeFaixaExiste(album, numFaixa)) {
+                    System.out.println("Já existe a faixa " + numFaixa + " no album " + album);
+                    return;
+                }
+            }
+            else {
+                existeAlbum = false;
+            }
+        }
         if (!existeAutor) {
             criarAutor(autor);
         }
         if (!existeGenero) {
             criarGenero(genero);
         }
-
         String sql = "INSERT INTO musica (identificador, titulo, data_criacao, autor_nome) VALUES\n" +
                 "(nextval('identificadores_musica'), (?), (?), (?);";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -106,7 +117,7 @@ public class App implements AutoCloseable {
                 criarAlbum(album);
             }
         }
-    }
+    }*/
 
     /**
      * Verifica se uma faixa específica dentro de um álbum existe na base de dados.
@@ -117,12 +128,18 @@ public class App implements AutoCloseable {
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
      */
     public boolean verificarSeFaixaExiste(String albumNome, int faixaNum) throws SQLException {
-        //Verificar se a faixa já está tomada
-        //select *
-        //from numero_ordem
-        //where album_nome like 'Purple Rain' AND numero=6
-        return true;
-
+        String sql = "SELECT * FROM numero_ordem WHERE album_nome LIKE (?) AND numero=(?)";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, albumNome);
+            stm.setInt(2, faixaNum);
+            try (ResultSet rs = stm.executeQuery()) {
+                if (!rs.isBeforeFirst()) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        }
     }
 
     /**
@@ -265,19 +282,7 @@ public class App implements AutoCloseable {
         }
     }
 
-    public static void main(String[] args) throws SQLException {
-        Scanner sc = new Scanner(System.in);
-        //menuPrincipal(sc);
-        //printLogo();
 
-
-        try (App app = new App()) {
-            //app.verificarAutorExiste(new String("John Lennon"));
-            app.verificarGeneroExiste(new String("Heavy Metal"));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
 
     private static void menuPrincipal(Scanner sc) {
         String opcaoStr = "";
@@ -322,6 +327,21 @@ public class App implements AutoCloseable {
         System.out.println("║`8b.  ;8.`8888  ` 8888     ,88'   8         `Y8o.`     8888     ,88'   ` 8888     ,88'8.  8 8888         ║");
         System.out.println("║ `Y8888P ,88P'     `8888888P'     8            `Yo      `8888888P'        `8888888P'  `8. 8 888888888888 ║");
         System.out.println("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════╝");
+    }
+
+    public static void main(String[] args) throws SQLException {
+        Scanner sc = new Scanner(System.in);
+        //menuPrincipal(sc);
+        //printLogo();
+
+
+        try (App app = new App()) {
+            //app.verificarAutorExiste(new String("John Lennon"));
+            //app.consultarMusicas(); - funciona
+            System.out.println(app.verificarGeneroExiste("Heavy Metal"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 
