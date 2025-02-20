@@ -71,54 +71,75 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @param numFaixa O número da faixa na listagem do álbum. Se for -1, considera-se que não há álbum associado.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da operação.
      */
-    /*public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
-        boolean existeAutor = verificarAutorExiste(autor);
-        boolean existeGenero = verificarGeneroExiste(genero);
-        boolean existeAlbum;
-        boolean musicaComAlbum = true;
-
-        if (album.equals("") && numFaixa == -1) {
-            musicaComAlbum = false;
+    public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
+        if(titulo.trim().equals("") || dataLancamento.trim().equals("") || autor.trim().equals("") || genero.trim().equals("")) {
+            System.out.println("Erro ao adicionar Musica. Parâmetros em falta");
         }
-        else{
-            if(verificarAlbumExiste(album)) {
-                existeAlbum = true;
-                if (verificarSeFaixaExiste(album, numFaixa)) {
-                    System.out.println("Já existe a faixa " + numFaixa + " no album " + album);
-                    return;
+        else {
+            java.sql.Date dataLancamentoSql = java.sql.Date.valueOf(dataLancamento);
+            boolean existeAutor = verificarAutorExiste(autor);
+            boolean existeGenero = verificarGeneroExiste(genero);
+            boolean existeAlbum = true;
+            boolean musicaComAlbum = true;
+            boolean operacaoComSucesso = false;
+
+            if (album.equals("") && numFaixa == -1) {
+                musicaComAlbum = false;
+            }
+            if (musicaComAlbum) {
+                if (verificarAlbumExiste(album)) {
+                    existeAlbum = true;
+                    if (verificarSeFaixaExiste(album, numFaixa)) {
+                        System.out.println("Já existe a faixa " + numFaixa + " no album " + album);
+                        return;
+                    }
+                } else {
+                    existeAlbum = false;
                 }
             }
-            else {
-                existeAlbum = false;
+            if (!existeAutor) {
+                criarAutor(autor);
             }
-        }
-        if (!existeAutor) {
-            criarAutor(autor);
-        }
-        if (!existeGenero) {
-            criarGenero(genero);
-        }
-        String sql = "INSERT INTO musica (identificador, titulo, data_criacao, autor_nome) VALUES\n" +
-                "(nextval('identificadores_musica'), (?), (?), (?);";
-        try (PreparedStatement stm = conn.prepareStatement(sql)) {
-            stm.setString(1, titulo);
-            stm.setString(2, dataLancamento);
-            stm.setString(3, autor);
-            int createdAutor = stm.executeUpdate();
-            if (createdAutor == 0) {
-                System.out.println("Música não criada");
-            } else {
-                System.out.println("Música criada");
+            if (musicaComAlbum) {
+                if (!existeAlbum) {
+                    criarAlbum(album);
+                }
             }
-        }
+            if (!existeGenero) {
+                criarGenero(genero);
+            }
 
-        if(temAlbum) {
-            if(!verificarAlbumExiste(album)){
-                criarAlbum(album);
+            //INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES
+            //('Let It Be', '1970-03-06', 'The Beatles'),
+            String sql = "INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES" +
+                    "((?), (?), (?));" +
+                    "INSERT INTO musica_genero (musica_identificador, genero_nome) VALUES" +
+                    "((SELECT last_value FROM musica_identificador_seq), (?));";
+            try (PreparedStatement stm = conn.prepareStatement(sql)) {
+                stm.setString(1, titulo);
+                stm.setDate(2, dataLancamentoSql);
+                stm.setString(3, autor);
+                stm.setString(4, genero);
+                int createdMusic = stm.executeUpdate();
+                if (createdMusic == 0) {
+                    System.out.println("Música não criada");
+                } else {
+                    System.out.println("Música criada");
+                }
+            }
+            if (musicaComAlbum) {
+                if (criarFaixa(numFaixa, album)) {
+                    operacaoComSucesso = true;
+                }
+            }
+            if (operacaoComSucesso) {
+                System.out.println("Música adicionada com sucesso");
             }
         }
-    }*/
+    }
 
+
+    //FAIXAS
     /**
      * Verifica se uma faixa específica dentro de um álbum existe na base de dados.
      *
@@ -128,7 +149,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
      */
     public boolean verificarSeFaixaExiste(String albumNome, int faixaNum) throws SQLException {
-        String sql = "SELECT * FROM numero_ordem WHERE album_nome LIKE (?) AND numero=(?)";
+        String sql = "SELECT * FROM faixa WHERE album_nome LIKE (?) AND num_faixa=(?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             stm.setString(1, albumNome);
             stm.setInt(2, faixaNum);
@@ -141,6 +162,23 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
             }
         }
     }
+
+    public boolean criarFaixa(int numFaixa, String albumNome) throws SQLException {
+        //INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES
+        //(1, 'Abbey Road', 1)
+        String sql = "INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES" +
+                "((?), (?), (SELECT last_value FROM musica_identificador_seq));";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setInt(1, numFaixa);
+            stm.setString(2, albumNome);
+            int createdAutor = stm.executeUpdate();
+            if (createdAutor == 0) {
+                return false;
+                } else {
+                    return true;
+                }
+            }
+        }
 
     /**
      * Verifica se existe um álbum com o nome fornecido no base de dados.
@@ -170,7 +208,6 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
      */
     public void criarAlbum(String albumNome) throws SQLException {
-        if (!verificarAutorExiste(albumNome)) {
             String sql = "INSERT INTO album (nome) VALUES(?);";
             try (PreparedStatement stm = conn.prepareStatement(sql)) {
                 stm.setString(1, albumNome);
@@ -182,7 +219,6 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 }
             }
         }
-    }
 
 
     /**
@@ -192,7 +228,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @return true se o autor existir, false caso contrário.
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
      */
-    public boolean verificarAutorExiste(String nomeAutor) throws SQLException {
+    public boolean verificarAutorExiste(String nomeAutor) throws SQLException {     //A FUNCIONAR
         String sql = "SELECT * FROM autor WHERE nome LIKE (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             stm.setString(1, nomeAutor);
@@ -213,8 +249,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
      */
     public void criarAutor(String autorNome) throws SQLException {
-        if (!verificarAutorExiste(autorNome)) {
-            String sql = "INSERT INTO autor (nome) VALUES(?);";
+        String sql = "INSERT INTO autor (nome) VALUES(?);";
             try (PreparedStatement stm = conn.prepareStatement(sql)) {
                 stm.setString(1, autorNome);
                 int createdAutor = stm.executeUpdate();
@@ -225,7 +260,6 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 }
             }
         }
-    }
 
     /**
      * Verifica se um genero com o nome especificado existe na base de dados.
@@ -234,7 +268,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @return true se o gênero existir, false caso contrário.
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
      */
-    public boolean verificarGeneroExiste(String generoNome) throws SQLException {
+    public boolean verificarGeneroExiste(String generoNome) throws SQLException { //A FUNCIONAR
         String sql = "SELECT * FROM genero WHERE nome LIKE (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             stm.setString(1, generoNome);
@@ -255,7 +289,6 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados durante a execução da operação.
      */
     public void criarGenero(String generoNome) throws SQLException {
-        if (!verificarGeneroExiste(generoNome)) {
             String sql = "INSERT INTO genero(nome) VALUES(?);";
             try (PreparedStatement stm = conn.prepareStatement(sql)) {
                 stm.setString(1, generoNome);
@@ -267,7 +300,6 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 }
             }
         }
-    }
 
     /**
      * Fecha a conexão com a base de dados associada a esta instância.
@@ -336,9 +368,9 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
 
 
         try (App app = new App()) {
-            //app.verificarAutorExiste(new String("John Lennon"));
-            //app.consultarMusicas(); - funciona
-            System.out.println(app.verificarGeneroExiste("Heavy Metal"));
+            app.consultarMusicas();
+            //adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
+            app.adicionarMusica("Paint it Black", "1973-08-20", "Rolling Stones", "Rock", "Goats Head Soup", 5);
         } catch (SQLException e) {
             e.printStackTrace();
         }
