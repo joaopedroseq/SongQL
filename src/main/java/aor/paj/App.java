@@ -323,6 +323,10 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         }
     } // Falta a parte de remover o album se estiver vazio
 
+    public void obterPlaylist(  String generoPlaylist, int numMusicas) throws SQLException {
+
+    }
+
 
     /**
      * Fecha a conexão com a base de dados associada a esta instância.
