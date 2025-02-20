@@ -269,7 +269,13 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         }
     }
 
-
+    /**
+     * Atualiza o título de uma música existente na base de dados com base no identificador fornecido.
+     *
+     * @param identificador O identificador único da música cujo título será atualizado.
+     * @param novoTitulo O novo título a ser atribuído à música.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou durante a execução da operação.
+     */
     public void atualizarTituloMusica(long identificador, String novoTitulo) throws SQLException {
         String sql = "UPDATE musica SET titulo = ? WHERE identificador = ?";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -283,6 +289,32 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
             }
         }
     }
+
+    public void removerMusica(long identificador) throws SQLException {
+        // Remover registros associados em musica_genero e faixa
+        String sqlGenero = "DELETE FROM musica_genero WHERE musica_identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlGenero)) {
+            stm.setLong(1, identificador);
+            stm.executeUpdate();
+        }
+
+        String sqlFaixa = "DELETE FROM faixa WHERE musica_identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlFaixa)) {
+            stm.setLong(1, identificador);
+            stm.executeUpdate();
+        }
+
+        String sqlMusica = "DELETE FROM musica WHERE identificador = ?";
+        try (PreparedStatement stm = conn.prepareStatement(sqlMusica)) {
+            stm.setLong(1, identificador);
+            int linhasAtualizadas = stm.executeUpdate();
+            if (linhasAtualizadas == 0) {
+                System.out.println("Música não encontrada ou não removida.");
+            } else {
+                System.out.println("Música removida com sucesso.");
+            }
+        }
+    } // Falta a parte de remover o album se estiver vazio
 
 
     /**
@@ -327,6 +359,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         while(!seValido);
         switch (opcao) {
             case 1:
+
         }
     }
 
