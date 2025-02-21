@@ -468,6 +468,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
 
     public void obterPlaylist(String generoPlaylist, int numMusicas) throws SQLException {
 }
+
     /**
      * Gera uma playlist temporária com músicas de um género específico e exibe as informações
      * das músicas selecionadas. A seleção das músicas é feita de forma aleatória e limitada
