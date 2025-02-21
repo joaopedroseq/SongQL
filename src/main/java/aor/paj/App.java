@@ -63,12 +63,12 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * sobre o título da música, data de lançamento, autor, gênero, álbum e número da faixa.
      * Caso o autor, genero ou álbum não existam na base de dados, eles são criados automaticamente.
      *
-     * @param titulo         O título da música a ser adicionada.
+     * @param titulo O título da música a ser adicionada.
      * @param dataLancamento A data de lançamento da música, no formato esperado pela base de dados.
-     * @param autor          O nome do autor da música. Se o autor não existir, ele será criado.
-     * @param genero         O género da música. Caso o género não exista, ele será criado.
-     * @param album          O nome do álbum ao qual a música pertence. Se o nome estiver vazio, considera-se que não há álbum associado.
-     * @param numFaixa       O número da faixa na listagem do álbum. Se for -1, considera-se que não há álbum associado.
+     * @param autor O nome do autor da música. Se o autor não existir, ele será criado.
+     * @param genero O género da música. Caso o género não exista, ele será criado.
+     * @param album O nome do álbum ao qual a música pertence. Se o nome estiver vazio, considera-se que não há álbum associado.
+     * @param numFaixa O número da faixa na listagem do álbum. Se for -1, considera-se que não há álbum associado.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da operação.
      */
     public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
@@ -146,7 +146,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
      * Verifica se uma faixa específica dentro de um álbum existe na base de dados.
      *
      * @param albumNome O nome do álbum no qual a faixa será verificada.
-     * @param faixaNum  O número da faixa a ser verificada no álbum.
+     * @param faixaNum O número da faixa a ser verificada no álbum.
      * @return true se a faixa existir no álbum especificado, false caso contrário.
      * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta falhar.
      */
@@ -413,6 +413,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
             }
             removerAlbumSeVazio(nomeAlbum);
         }
+
         String sqlMusica = "DELETE FROM musica WHERE identificador = ?";
         try (PreparedStatement stm = conn.prepareStatement(sqlMusica)) {
             stm.setLong(1, identificador);
@@ -465,10 +466,53 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
         return null;
     }
 
-
     public void obterPlaylist(String generoPlaylist, int numMusicas) throws SQLException {
+}
+    /**
+     * Gera uma playlist temporária com músicas de um género específico e exibe as informações
+     * das músicas selecionadas. A seleção das músicas é feita de forma aleatória e limitada
+     * ao número especificado pelo utilizador. Quando a sessão é fechada o albúm é removido.
+     *
+     * @param generoEscolhido O género das músicas que devem compor a playlist.
+     * @param numeroMusicas O número máximo de músicas a serem incluídas na playlist.
+     * @throws SQLException Se ocorrer um erro de acesso à base de dados durante a execução da operação.
+     */
+    public void gerarPlaylist(String generoEscolhido, int numeroMusicas) throws SQLException {
 
+        String sql = "CREATE TEMP TABLE temp_playlist AS " +
+                "SELECT musica.identificador, musica.titulo, musica.data_criacao, musica.autor_nome, genero.nome AS genero_nome " +
+                "FROM musica " +
+                "INNER JOIN autor ON musica.autor_nome = autor.nome " +
+                "INNER JOIN musica_genero ON musica.identificador = musica_genero.musica_identificador " +
+                "INNER JOIN genero ON musica_genero.genero_nome = genero.nome " +
+                "WHERE genero.nome = ? " +
+                "ORDER BY RANDOM() " +
+                "LIMIT ?;";
+
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, generoEscolhido);
+            stm.setInt(2, numeroMusicas);
+            stm.executeUpdate();
+
+            String selectSql = "SELECT * FROM temp_playlist";
+            try (PreparedStatement selectStm = conn.prepareStatement(selectSql);
+                 ResultSet rs = selectStm.executeQuery()) {
+                while (rs.next()) {
+                    System.out.println("ID: " + rs.getString("identificador") +
+                            " Título: " + rs.getString("titulo") +
+                            " Data: " + rs.getString("data_criacao") +
+                            " Autor: " + rs.getString("autor_nome") +
+                            " Género: " + rs.getString("genero_nome"));
+                }
+            }
+        }
+        // Remove a tabela temporária
+        String sqlDrop = "DROP TABLE temp_playlist;";
+        try (PreparedStatement stmDrop = conn.prepareStatement(sqlDrop)) {
+            stmDrop.executeUpdate();
+        }
     }
+
 
 
     /**
@@ -571,6 +615,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 System.out.println("Opção inválida.");
         }
     }
+
 
 
     private static void printLogo() {
