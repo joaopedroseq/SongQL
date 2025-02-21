@@ -27,11 +27,11 @@ public class App implements AutoCloseable {
      *
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da consulta.
      */
-    public void consultarMusicas() throws SQLException {
+    public void consultarMusicas(String ordenacao) throws SQLException {
         String sql = "SELECT identificador as id, titulo as titulo, data_criacao as lancamento, autor_nome as autor, coalesce(album_nome, 's/album') as album,\n" +
                 "coalesce(faixa.num_faixa::text, '') as faixa\n" +
                 "FROM musica\n" +
-                "left outer join faixa on musica.identificador = faixa.musica_identificador";
+                "left outer join faixa on musica.identificador = faixa.musica_identificador " + ordenacao;
 
         String formatoTitulo = "%-10s %-30s %-15s %-20s %-25s %-10s%n";
         String formatoDados = "%-10s %-30s %-15s %-20s %-25s %-10s%n";
@@ -345,9 +345,10 @@ public class App implements AutoCloseable {
             System.out.println("Parâmetros vazios");
             return false;
         } else {
-            String sql = "SELECT * FROM genero WHERE nome LIKE (?)";
+            String generoNomeLower = generoNome.toLowerCase();
+            String sql = "SELECT * FROM genero WHERE lower(nome) = (?)";
             try (PreparedStatement stm = conn.prepareStatement(sql)) {
-                stm.setString(1, generoNome);
+                stm.setString(1, generoNomeLower);
                 try (ResultSet rs = stm.executeQuery()) {
                     if (!rs.isBeforeFirst()) {
                         return false;
@@ -488,13 +489,14 @@ public class App implements AutoCloseable {
      * @throws SQLException Se ocorrer um erro de acesso à base de dados durante a execução da operação.
      */
     public void gerarPlaylist(String generoEscolhido, int numeroMusicas) throws SQLException {
+        String generoEscolhidoLower = generoEscolhido.toLowerCase();
         String sqlCreate = "CREATE TEMP TABLE temp_playlist AS " +
                 "SELECT musica.identificador, musica.titulo, musica.data_criacao, musica.autor_nome, genero.nome AS genero_nome " +
                 "FROM musica " +
                 "INNER JOIN autor ON musica.autor_nome = autor.nome " +
                 "INNER JOIN musica_genero ON musica.identificador = musica_genero.musica_identificador " +
                 "INNER JOIN genero ON musica_genero.genero_nome = genero.nome " +
-                "WHERE genero.nome = ? " +
+                "WHERE LOWER(genero.nome) = ? " +
                 "ORDER BY RANDOM () " +
                 "LIMIT ?;";
 
@@ -506,7 +508,7 @@ public class App implements AutoCloseable {
                 "-----------------------------------------------------------");
 
         try (PreparedStatement stmCreate = conn.prepareStatement(sqlCreate)) {
-            stmCreate.setString(1, generoEscolhido);
+            stmCreate.setString(1, generoEscolhidoLower);
             stmCreate.setInt(2, numeroMusicas);
             stmCreate.executeUpdate();
 
@@ -519,8 +521,6 @@ public class App implements AutoCloseable {
                 }
             }
         }
-
-        // Remove a tabela temporária
         String sqlDrop = "DROP TABLE temp_playlist;";
         try (PreparedStatement stmDrop = conn.prepareStatement(sqlDrop)) {
             stmDrop.executeUpdate();
@@ -571,11 +571,7 @@ public class App implements AutoCloseable {
 
         switch (opcao) {
             case 1:
-                try {
-                    app.consultarMusicas();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                menuConsultarMusicas(sc, app);
                 menuPrincipal(sc, app);
                 break;
             case 2:
@@ -650,6 +646,85 @@ public class App implements AutoCloseable {
                 System.exit(0);
             default:
                 System.out.println("Opção inválida.");
+        }
+    }
+
+    public static void menuConsultarMusicas(Scanner sc, App app) throws SQLException {
+        String opcaoStr = "";
+        int opcao = -1;
+        String coluna = "";
+        String ordenacao = "";
+        boolean seValido = false;
+        do {
+            System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
+            System.out.println("║              Escolha se pretende alguma ordenação                 ║");
+            System.out.println("║            ou deixe o campo vazio para ordenar por ID             ║");
+            System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
+            System.out.println("╔═══════════════════════════════════════════════════════════════════╗");
+            System.out.println("║ 1. Por título                                                     ║");
+            System.out.println("║ 2. Por data de lançamento                                         ║");
+            System.out.println("║ 3. Por autor                                                      ║");
+            System.out.println("║ 4. Por nome do albúm                                              ║");
+            System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
+            opcaoStr = sc.nextLine();
+            if (!opcaoStr.trim().equals("")) {
+                if (ValidacaoInput.validar(opcaoStr, 1, 4)) {
+                    opcao = Integer.parseInt(opcaoStr);
+                    seValido = true;
+                } else {
+                    System.out.println("Escolha inválida. Escolha uma opção entre 1 e 4, ou vazio.");
+                    seValido = false;
+                }
+            } else {
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+        seValido = false;
+        String ascendenteString;
+        int ascendente = -1;
+        do {
+            System.out.println("Digite 1 se pretende ordenar de forma ascendende ou 2 se pretende ordenar de forma descendente");
+            ascendenteString = sc.nextLine();
+            if (ValidacaoInput.validar(ascendenteString, 1, 2)) {
+                ascendente = Integer.parseInt(ascendenteString);
+                seValido = true;
+            } else {
+                System.out.println("Escolha inválida. Escolha uma opção entre 1 e 2.");
+                seValido = false;
+            }
+        }
+        while (!seValido);
+
+        if(opcaoStr.trim().equals("")){
+            coluna = "identificador";
+        }
+        else{
+            switch (opcao) {
+                case 1:
+                    coluna = "titulo";
+                    break;
+                case 2:
+                    coluna = "lancamento";
+                    break;
+                case 3:
+                    coluna = "autor";
+                    break;
+                case 4:
+                    coluna = "album";
+                    break;
+            }
+        }
+        if(ascendente == 1)
+            ordenacao = "ORDER BY " + coluna + " ASC";
+        else if(ascendente == 2){
+            ordenacao = "ORDER BY " + coluna + " DESC";
+        }
+        try {
+            app.consultarMusicas(ordenacao);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
