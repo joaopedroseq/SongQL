@@ -59,7 +59,7 @@ public class App implements AutoCloseable {
      * @param numFaixa O número da faixa dentro do álbum. Use -1 se a música não tiver um álbum associado.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a operação.
      */
-    public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
+    public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, long numFaixa) throws SQLException {
         if(titulo.trim().equals("") || dataLancamento.trim().equals("") || autor.trim().equals("") || genero.trim().equals("")) {
             System.out.println("Erro ao adicionar Musica. Parâmetros em falta");
         }
@@ -136,11 +136,11 @@ public class App implements AutoCloseable {
      * @return true se a faixa existir no álbum especificado, false caso contrário.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados ou a consulta falhar.
      */
-    public boolean verificarSeFaixaExiste(String albumNome, int faixaNum) throws SQLException {
+    public boolean verificarSeFaixaExiste(String albumNome, long faixaNum) throws SQLException {
         String sql = "SELECT * FROM faixa WHERE album_nome LIKE (?) AND num_faixa=(?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             stm.setString(1, albumNome);
-            stm.setInt(2, faixaNum);
+            stm.setLong(2, faixaNum);
             try (ResultSet rs = stm.executeQuery()) {
                 if (!rs.isBeforeFirst()) {
                     return false;
@@ -176,13 +176,13 @@ public class App implements AutoCloseable {
         }
     }
 
-    public boolean criarFaixa(int numFaixa, String albumNome) throws SQLException {
+    public boolean criarFaixa(long numFaixa, String albumNome) throws SQLException {
         //INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES
         //(1, 'Abbey Road', 1)
         String sql = "INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES" +
                 "((?), (?), (SELECT last_value FROM musica_identificador_seq));";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
-            stm.setInt(1, numFaixa);
+            stm.setLong(1, numFaixa);
             stm.setString(2, albumNome);
             int createdAutor = stm.executeUpdate();
             if (createdAutor == 0) {
@@ -453,9 +453,6 @@ public class App implements AutoCloseable {
         return null;
     }
 
-    public void obterPlaylist(String generoPlaylist, int numMusicas) throws SQLException {
-}
-
     /**
      * Gera uma playlist temporária com músicas de um género específico e exibe as informações
      * das músicas selecionadas. A seleção das músicas é feita de forma aleatória e limitada
@@ -599,7 +596,7 @@ public class App implements AutoCloseable {
                 System.out.println("Digite o número de músicas para a playlist:");
                 int numMusicas = Integer.parseInt(sc.nextLine());
                 try {
-                    app.obterPlaylist(generoPlaylist, numMusicas);
+                    app.gerarPlaylist(generoPlaylist, numMusicas);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -633,10 +630,10 @@ public class App implements AutoCloseable {
 
 
         try (App app = new App()) {
-            //app.consultarMusicas();
+            app.consultarMusicas();
             //adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
-            app.gerarPlaylist("Rock", 3);
-           // app.adicionarMusica("Paint it Black", "1973-08-20", "Rolling Stones", "Rock", "Goats Head Soup", 5);
+            //app.gerarPlaylist("Rock", 20);
+           app.removerMusica(16);
         } catch (SQLException e) {
             e.printStackTrace();
         }
