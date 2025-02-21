@@ -179,16 +179,7 @@ public abstract class ValidacaoInput {
      * @return uma string com caracteres especiais substituídos pelos seus equivalentes não acentuados
      */
     public static String removerCarateresEspeciais(String string){
-        String resultado = string.replaceAll("[áàãâÁÀÃÃåÅåÄä]","a");
-        resultado = resultado.replaceAll("[éèêÉÈÊËëĔĕ]","e");
-        resultado = resultado.replaceAll("[íìîÍÌÎÏïÎîÌì]","i");
-        resultado = resultado.replaceAll("[óòõôÒÓÕÔÖöÔôŌōØø]","o");
-        resultado = resultado.replaceAll("[úùûÙÚÛÜüŪūÛûÙùÚú]","u");
-        resultado = resultado.replaceAll("[çÇČč]","c");
-        resultado = resultado.replaceAll("[ĞğĢģ]","g");
-        resultado = resultado.replaceAll("[Ññ]","c");
-        resultado = resultado.replaceAll("[ŜŝŞş]","s");
-        resultado = resultado.replaceAll("[Ÿÿ]","y");
+        String resultado = string.replaceAll("[\'\"]","");
         return resultado;
-        }
+    }
     }

@@ -1,6 +1,9 @@
 package aor.paj;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Scanner;
 
 public class App implements AutoCloseable {
@@ -10,7 +13,10 @@ public class App implements AutoCloseable {
     private Connection conn;
 
     public App() throws SQLException {
+        Scanner sc = new Scanner(System.in);
         this.conn = DriverManager.getConnection(App.URL, App.USER, App.PASSWORD);
+        printLogo();
+        menuPrincipal(sc, this);
     }
 
 
@@ -47,23 +53,47 @@ public class App implements AutoCloseable {
     }
 
     /**
+     * Consulta todas as músicas registadas na base de dados e exibe suas informações, incluindo
+     * o título, data de lançamento, autor, álbum e faixa. Caso algum campo seja nulo, informações
+     * padrão como "s/album" ou campos vazios são usadas.
+     *
+     * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da consulta.
+     */
+    public void consultarGeneros() throws SQLException {
+        String sql = "SELECT * FROM genero";
+        String formatoTitulo = "%-30s %n";
+        String formatoDados = "%-30s %n";
+        System.out.println("Lista de Géneros:");
+        System.out.printf(formatoTitulo, "Nome do Género");
+        System.out.println("------------------------------");
+
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            try (ResultSet rs1 = stm.executeQuery()) {
+                while (rs1.next()) {
+                    System.out.printf(formatoDados, rs1.getString("nome"));
+                }
+            }
+        }
+        System.out.println("------------------------------");
+    }
+
+    /**
      * Adiciona uma nova música à base de dados, incluindo informações como título, data de lançamento,
      * autor, género, álbum e número da faixa. Realiza verificações e, caso necessário, cria registos
      * para autor, álbum e género antes de adicionar a música.
      *
-     * @param titulo O título da música a ser adicionada.
+     * @param titulo         O título da música a ser adicionada.
      * @param dataLancamento A data de lançamento da música no formato "yyyy-MM-dd".
-     * @param autor O nome do autor da música.
-     * @param genero O gênero musical associado à música.
-     * @param album O nome do álbum ao qual a música pertence. Se não houver álbum, deve ser vazio.
-     * @param numFaixa O número da faixa dentro do álbum. Use -1 se a música não tiver um álbum associado.
+     * @param autor          O nome do autor da música.
+     * @param genero         O gênero musical associado à música.
+     * @param album          O nome do álbum ao qual a música pertence. Se não houver álbum, deve ser vazio.
+     * @param numFaixa       O número da faixa dentro do álbum. Use -1 se a música não tiver um álbum associado.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a operação.
      */
     public void adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, long numFaixa) throws SQLException {
-        if(titulo.trim().equals("") || dataLancamento.trim().equals("") || autor.trim().equals("") || genero.trim().equals("")) {
+        if (titulo.trim().equals("") || dataLancamento.trim().equals("") || autor.trim().equals("") || genero.trim().equals("")) {
             System.out.println("Erro ao adicionar Musica. Parâmetros em falta");
-        }
-        else {
+        } else {
             java.sql.Date dataLancamentoSql = java.sql.Date.valueOf(dataLancamento);
             boolean existeAutor = verificarAutorExiste(autor);
             boolean existeGenero = verificarGeneroExiste(genero);
@@ -128,11 +158,12 @@ public class App implements AutoCloseable {
 
 
     //FAIXAS
+
     /**
      * Verifica se uma faixa específica dentro de um álbum existe na base de dados.
      *
      * @param albumNome O nome do álbum no qual a faixa será verificada.
-     * @param faixaNum O número da faixa a ser verificada no álbum.
+     * @param faixaNum  O número da faixa a ser verificada no álbum.
      * @return true se a faixa existir no álbum especificado, false caso contrário.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados ou a consulta falhar.
      */
@@ -152,10 +183,6 @@ public class App implements AutoCloseable {
     }
 
     public boolean verificarSeMusicaTemFaixa(long idenficadorMusica) throws SQLException {
-        //SELECT num_faixa
-        //FROM musica
-        //inner join faixa on musica.identificador=faixa.musica_identificador
-        //where musica.identificador = 19
         if (idenficadorMusica <= 0) {
             System.out.println("Parâmeteros vazios");
             return false;
@@ -177,8 +204,6 @@ public class App implements AutoCloseable {
     }
 
     public boolean criarFaixa(long numFaixa, String albumNome) throws SQLException {
-        //INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES
-        //(1, 'Abbey Road', 1)
         String sql = "INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES" +
                 "((?), (?), (SELECT last_value FROM musica_identificador_seq));";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -187,13 +212,14 @@ public class App implements AutoCloseable {
             int createdAutor = stm.executeUpdate();
             if (createdAutor == 0) {
                 return false;
-                } else {
-                    return true;
-                }
+            } else {
+                return true;
             }
         }
+    }
 
-        //ALBUM
+    //ALBUM
+
     /**
      * Verifica se existe um álbum com o nome fornecido no base de dados.
      *
@@ -222,20 +248,19 @@ public class App implements AutoCloseable {
      * @throws SQLException Se ocorrer um erro de acesso a base de dados ou durante a execução da operação.
      */
     public void criarAlbum(String albumNome) throws SQLException {
-            String sql = "INSERT INTO album (nome) VALUES(?);";
-            try (PreparedStatement stm = conn.prepareStatement(sql)) {
-                stm.setString(1, albumNome);
-                int createdAutor = stm.executeUpdate();
-                if (createdAutor == 0) {
-                    System.out.println("Album não criado");
-                } else {
-                    System.out.println("Album criado");
-                }
+        String sql = "INSERT INTO album (nome) VALUES(?);";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, albumNome);
+            int createdAutor = stm.executeUpdate();
+            if (createdAutor == 0) {
+                System.out.println("Album não criado");
+            } else {
+                System.out.println("Album criado");
             }
         }
+    }
 
     public void removerAlbumSeVazio(String albumNome) throws SQLException {
-        //DELETE FROM album WHERE nome = 'TESTE'
         if (verificarSeAlbumVazio(albumNome)) {
             String sql = "DELETE FROM album WHERE nome = (?)";
             try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -252,9 +277,8 @@ public class App implements AutoCloseable {
         }
     }
 
-    //Ver
+
     public boolean verificarSeAlbumVazio(String albumNome) throws SQLException {
-        //SELECT * FROM album inner join faixa on album.nome=faixa.album_nome WHERE album.nome = 'TESTE'
         String sql = "SELECT * FROM album inner join faixa on album.nome=faixa.album_nome WHERE album.nome = (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
             stm.setString(1, albumNome);
@@ -298,16 +322,16 @@ public class App implements AutoCloseable {
      */
     public void criarAutor(String autorNome) throws SQLException {
         String sql = "INSERT INTO autor (nome) VALUES(?);";
-            try (PreparedStatement stm = conn.prepareStatement(sql)) {
-                stm.setString(1, autorNome);
-                int createdAutor = stm.executeUpdate();
-                if (createdAutor == 0) {
-                    System.out.println("Autor não criado");
-                } else {
-                    System.out.println("Autor criado");
-                }
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, autorNome);
+            int createdAutor = stm.executeUpdate();
+            if (createdAutor == 0) {
+                System.out.println("Autor não criado");
+            } else {
+                System.out.println("Autor criado");
             }
         }
+    }
 
     /**
      * Verifica se um genero com o nome especificado existe na base de dados.
@@ -342,23 +366,23 @@ public class App implements AutoCloseable {
      * @throws SQLException Se ocorrer um erro de acesso a base de dados durante a execução da operação.
      */
     public void criarGenero(String generoNome) throws SQLException {
-            String sql = "INSERT INTO genero(nome) VALUES(?);";
-            try (PreparedStatement stm = conn.prepareStatement(sql)) {
-                stm.setString(1, generoNome);
-                int createdAutor = stm.executeUpdate();
-                if (createdAutor == 0) {
-                    System.out.println("Género não criado");
-                } else {
-                    System.out.println("Género criado");
-                }
+        String sql = "INSERT INTO genero(nome) VALUES(?);";
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, generoNome);
+            int createdAutor = stm.executeUpdate();
+            if (createdAutor == 0) {
+                System.out.println("Género não criado");
+            } else {
+                System.out.println("Género criado");
             }
         }
+    }
 
     /**
      * Atualiza o título de uma música existente na base de dados com base no identificador fornecido.
      *
      * @param identificador O identificador único da música cujo título será atualizado.
-     * @param novoTitulo O novo título a ser atribuído à música.
+     * @param novoTitulo    O novo título a ser atribuído à música.
      * @throws SQLException Se ocorrer um erro de acesso a base de dados ou durante a execução da operação.
      */
     public void atualizarTituloMusica(long identificador, String novoTitulo) throws SQLException {
@@ -453,13 +477,14 @@ public class App implements AutoCloseable {
         return null;
     }
 
+
     /**
      * Gera uma playlist temporária com músicas de um género específico e exibe as informações
      * das músicas selecionadas. A seleção das músicas é feita de forma aleatória e limitada
      * ao número especificado pelo utilizador. Quando a sessão é fechada o albúm é removido.
      *
      * @param generoEscolhido O género das músicas que devem compor a playlist.
-     * @param numeroMusicas O número máximo de músicas a serem incluídas na playlist.
+     * @param numeroMusicas   O número máximo de músicas a serem incluídas na playlist.
      * @throws SQLException Se ocorrer um erro de acesso à base de dados durante a execução da operação.
      */
     public void gerarPlaylist(String generoEscolhido, int numeroMusicas) throws SQLException {
@@ -519,7 +544,7 @@ public class App implements AutoCloseable {
     }
 
 
-    private static void menuPrincipal(Scanner sc, App app) {
+    private void menuPrincipal(Scanner sc, App app) throws SQLException {
         String opcaoStr = "";
         int opcao = -1;
         boolean seValido = false;
@@ -533,9 +558,10 @@ public class App implements AutoCloseable {
             System.out.println("║ 3. Alterar o título de uma música                                 ║");
             System.out.println("║ 4. Remover uma música                                             ║");
             System.out.println("║ 5. Criar uma playlist                                             ║");
+            System.out.println("║ 6. Sair                                                           ║");
             System.out.println("╚═══════════════════════════════════════════════════════════════════╝");
             opcaoStr = sc.nextLine();
-            if (ValidacaoInput.validar(opcaoStr, 1, 5)) {
+            if (ValidacaoInput.validar(opcaoStr, 1, 6)) {
                 opcao = Integer.parseInt(opcaoStr);
                 seValido = true;
             } else {
@@ -550,62 +576,207 @@ public class App implements AutoCloseable {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
+                menuPrincipal(sc, app);
                 break;
             case 2:
-                System.out.println("Digite o título da música:");
-                String titulo = sc.nextLine();
-                System.out.println("Digite a data de criação (YYYY-MM-DD):");
-                String dataLancamento = sc.nextLine();
-                System.out.println("Digite o nome do autor:");
-                String autor = sc.nextLine();
-                System.out.println("Digite o género musical:");
-                String genero = sc.nextLine();
-                System.out.println("Digite o nome do álbum (ou deixe em branco):");
-                String album = sc.nextLine();
-                System.out.println("Digite o número da faixa (ou -1 se não houver):");
-                int numFaixa = Integer.parseInt(sc.nextLine());
-                try {
-                    app.adicionarMusica(titulo, dataLancamento, autor, genero, album, numFaixa);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                menuAdicionarMusica(sc, app);
+                menuPrincipal(sc, app);
                 break;
             case 3:
-                System.out.println("Digite o identificador da música que deseja alterar:");
-                long idMusica = Long.parseLong(sc.nextLine());
-                System.out.println("Digite o novo título da música:");
-                String novoTitulo = sc.nextLine();
-                try {
-                    app.atualizarTituloMusica(idMusica, novoTitulo);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                menuAlterarTituloMusica(sc, app);
+                menuPrincipal(sc, app);
                 break;
             case 4:
-                System.out.println("Digite o identificador da música que deseja remover:");
-                long idRemover = Long.parseLong(sc.nextLine());
+                long identificador = -1;
+                seValido = false;
+                do {
+                    System.out.print("Digite o identificador da música que deseja remover: ");
+                    String identificadorString = sc.nextLine();
+                    if (ValidacaoInput.validar(identificadorString, 1)) {
+                        identificador = Long.parseLong(identificadorString);
+                        seValido = true;
+                    }
+                }
+                while (!seValido);
                 try {
-                    app.removerMusica(idRemover);
+                    app.removerMusica(identificador);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
+                menuPrincipal(sc, app);
                 break;
             case 5:
-                System.out.println("Digite o género musical para a playlist:");
-                String generoPlaylist = sc.nextLine();
-                System.out.println("Digite o número de músicas para a playlist:");
-                int numMusicas = Integer.parseInt(sc.nextLine());
+                seValido = false;
+                String generoPlaylist;
+                do {
+                    consultarGeneros();
+                    System.out.print("Digite o género musical para a playlist: ");
+                    String generoBruto = sc.nextLine();
+                    generoPlaylist = ValidacaoInput.removerCarateresEspeciais(generoBruto);
+                    if (generoPlaylist.trim().equals("")) {
+                        seValido = false;
+                    } else {
+                        seValido = true;
+                    }
+                    if (seValido) {
+                        if (!verificarGeneroExiste(generoPlaylist)) {
+                            System.out.println("Género musical não existente. Escolha um da seguinte lista");
+                            seValido = false;
+                        }
+                    }
+                }
+                while (!seValido);
+
+                int numMusicas = -1;
+                seValido = false;
+                do {
+                    System.out.println("Digite o número de músicas para a playlist: ");
+                    String numMusicasString = sc.nextLine();
+                    if (ValidacaoInput.validar(numMusicasString, 1)) {
+                        numMusicas = Integer.parseInt(numMusicasString);
+                        seValido = true;
+                    }
+                }
+                while (!seValido);
                 try {
                     app.gerarPlaylist(generoPlaylist, numMusicas);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
+                menuPrincipal(sc, app);
                 break;
+            case 6:
+                System.out.println("A sair de SongQL");
+                System.exit(0);
             default:
                 System.out.println("Opção inválida.");
         }
     }
 
+
+    public static void menuAdicionarMusica(Scanner sc, App app) throws SQLException {
+        boolean seValido = false;
+        String titulo;
+        do {
+            System.out.println("Digite o título da música:");
+            String tituloBruto = sc.nextLine();
+            titulo = ValidacaoInput.removerCarateresEspeciais(tituloBruto);
+            if (titulo.trim().equals("")) {
+                seValido = false;
+            } else {
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+        String dataLancamento = pedirData(sc);
+
+        seValido = false;
+        String autor;
+        do {
+            System.out.println("Digite o nome do autor:");
+            String autorBruto = sc.nextLine();
+            autor = ValidacaoInput.removerCarateresEspeciais(autorBruto);
+            if (autor.trim().equals("")) {
+                seValido = false;
+            } else {
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+
+        seValido = false;
+        String genero;
+        do {
+            System.out.println("Digite o género musical:");
+            String generoBruto = sc.nextLine();
+            genero = ValidacaoInput.removerCarateresEspeciais(generoBruto);
+            if (genero.trim().equals("")) {
+                seValido = false;
+            } else {
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+        String album;
+        System.out.println("Digite o nome do álbum (ou deixe em branco se não pertencer a um album):");
+        String albumBruto = sc.nextLine();
+        album = ValidacaoInput.removerCarateresEspeciais(albumBruto);
+
+        int numFaixa = -1;
+        if (!album.equals("")) {
+            seValido = false;
+            do {
+                System.out.println("Digite o número da faixa:");
+                String numFaixaString = sc.nextLine();
+                if (ValidacaoInput.validar(numFaixaString, 1)) {
+                    numFaixa = Integer.parseInt(numFaixaString);
+                    seValido = true;
+                }
+            }
+            while (!seValido);
+        }
+        try {
+            app.adicionarMusica(titulo, dataLancamento, autor, genero, album, numFaixa);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void menuAlterarTituloMusica(Scanner sc, App app) throws SQLException {
+        boolean seValido = false;
+        long identificador = -1;
+        do {
+            System.out.print("Digite o identificador da música que deseja alterar: ");
+            String identificadorString = sc.nextLine();
+            if (ValidacaoInput.validar(identificadorString, 1)) {
+                identificador = Long.parseLong(identificadorString);
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+        String novoTitulo;
+        do {
+            System.out.println("Digite o novo título da música:");
+            String novoTituloBruto = sc.nextLine();
+            novoTitulo = ValidacaoInput.removerCarateresEspeciais(novoTituloBruto);
+            if (novoTitulo.trim().equals("")) {
+                seValido = false;
+            } else {
+                seValido = true;
+            }
+        }
+        while (!seValido);
+
+        try {
+            app.atualizarTituloMusica(identificador, novoTitulo);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String pedirData(Scanner sc) {
+        boolean eValido;
+        String dataString;
+        do {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            System.out.println("Escreva a data que pretende no formato: yyyy-MM-dd:");
+            dataString = sc.nextLine();
+            try {
+                eValido = true;
+                Date dataEscolhida = dateFormat.parse(dataString);
+                dataString = dateFormat.format(dataEscolhida);
+            } catch (Exception e) {
+                System.out.println("Formato de data e de hora inválido. Escreva a data no formato: yyyy-MM-dd");
+                eValido = false;
+            }
+        }
+        while (!eValido);
+        return dataString;
+    }
 
 
     private static void printLogo() {
@@ -625,19 +796,17 @@ public class App implements AutoCloseable {
 
     public static void main(String[] args) throws SQLException {
         Scanner sc = new Scanner(System.in);
-        //menuPrincipal(sc);
-        //printLogo();
+        new App();
 
 
-        try (App app = new App()) {
+
+        /*try (App app = new App()) {
             app.consultarMusicas();
             //adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
             //app.gerarPlaylist("Rock", 20);
-           app.removerMusica(16);
+           //app.removerMusica(16);
         } catch (SQLException e) {
-            e.printStackTrace();
-        }
+            e.printStackTrace();*/
     }
-
-
 }
+
