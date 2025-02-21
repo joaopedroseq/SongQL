@@ -362,7 +362,7 @@ public class App implements AutoCloseable {
                 "INNER JOIN musica_genero ON musica.identificador = musica_genero.musica_identificador " +
                 "INNER JOIN genero ON musica_genero.genero_nome = genero.nome " +
                 "WHERE genero.nome = ? " +
-                "ORDER BY RANDOM() " +
+                "ORDER BY RANDOM () " +
                 "LIMIT ?;";
 
         String formatoTitulo = "%-10s %-30s %-15s %-20s %-20s%n";
@@ -395,8 +395,6 @@ public class App implements AutoCloseable {
         System.out.println("-------------------------------------------------------------------------------" +
                 "-----------------------------------------------------------");
     }
-
-
 
 
     /**
