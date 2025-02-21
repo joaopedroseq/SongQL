@@ -3,7 +3,6 @@ package aor.paj;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Scanner;
 
 public class App implements AutoCloseable {
@@ -127,8 +126,6 @@ public class App implements AutoCloseable {
                 criarGenero(genero);
             }
 
-            //INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES
-            //('Let It Be', '1970-03-06', 'The Beatles'),
             String sql = "INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES" +
                     "((?), (?), (?));" +
                     "INSERT INTO musica_genero (musica_identificador, genero_nome) VALUES" +
@@ -182,6 +179,14 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Verifica se uma música identificada pelo ID fornecido possui alguma faixa associada.
+     *
+     * @param idenficadorMusica o identificador único da música a ser verificada
+     * @return {@code true} se a música possuir ao menos uma faixa associada,
+     *         {@code false} caso contrário ou se o identificador for inválido (menor ou igual a zero)
+     * @throws SQLException se ocorrer um erro durante a execução da consulta na base de dados
+     */
     public boolean verificarSeMusicaTemFaixa(long idenficadorMusica) throws SQLException {
         if (idenficadorMusica <= 0) {
             System.out.println("Parâmeteros vazios");
@@ -203,6 +208,15 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Cria um novo registo na tabela 'faixa' com o número da faixa especificado e o nome do álbum.
+     * Este também associa a faixa recém-criada com o identificador de música mais recente da sequência.
+     *
+     * @param numFaixa O número da faixa a ser adicionada.
+     * @param albumNome O nome do álbum ao qual a faixa pertence.
+     * @return true se a faixa foi criada com sucesso, false caso contrário.
+     * @throws SQLException Se ocorrer um erro de acesso ao banco de dados ou a consulta SQL falhar.
+     */
     public boolean criarFaixa(long numFaixa, String albumNome) throws SQLException {
         String sql = "INSERT INTO faixa (num_faixa, album_nome, musica_identificador) VALUES" +
                 "((?), (?), (SELECT last_value FROM musica_identificador_seq));";
@@ -260,6 +274,13 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Remove um álbum da base de dados se ele estiver vazio.
+     * Verifica se o álbum especificado contém alguma música, e elimina-o apenas se o álbum estiver vazio.
+     *
+     * @param albumNome O nome do álbum a ser verificado e potencialmente removido.
+     * @throws SQLException Se ocorrer um erro de acesso a base de dados.
+     */
     public void removerAlbumSeVazio(String albumNome) throws SQLException {
         if (verificarSeAlbumVazio(albumNome)) {
             String sql = "DELETE FROM album WHERE nome = (?)";
@@ -277,7 +298,13 @@ public class App implements AutoCloseable {
         }
     }
 
-
+    /**
+     * Método para verificar se um álbum está vazio, verificando se ele tem alguma faixa associada.
+     *
+     * @param albumNome o nome do álbum a ser verificado
+     * @return verdadeiro se o álbum não tem faixas, falso caso contrário
+     * @throws SQLException se ocorrer um erro de acesso a base de dados
+     */
     public boolean verificarSeAlbumVazio(String albumNome) throws SQLException {
         String sql = "SELECT * FROM album inner join faixa on album.nome=faixa.album_nome WHERE album.nome = (?)";
         try (PreparedStatement stm = conn.prepareStatement(sql)) {
@@ -298,7 +325,7 @@ public class App implements AutoCloseable {
      *
      * @param nomeAutor O nome do autor cuja existência deve ser verificada.
      * @return true se o autor existir, false caso contrário.
-     * @throws SQLException Se ocorrer um erro de acesso ao base de dados ou a consulta falhar.
+     * @throws SQLException Se ocorrer um erro de acesso a base de dados ou a consulta falhar.
      */
     public boolean verificarAutorExiste(String nomeAutor) throws SQLException {     //A FUNCIONAR
         String sql = "SELECT * FROM autor WHERE nome LIKE (?)";
@@ -438,11 +465,15 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Verifica se uma música possui um álbum associado na base de dados.
+     * realiza uma consulta no banco de dados utilizando o identificador da música.
+     *
+     * @param identificadorMusica O identificador único da música cuja associação com um álbum será verificada.
+     * @return true se a música estiver associada a um álbum, caso contrário false.
+     * @throws SQLException Caso ocorra um erro durante a execução da consulta na base de dados.
+     */
     public boolean verificarSeMusicaTemAlbum(long identificadorMusica) throws SQLException {
-        //SELECT album_nome
-        //FROM musica
-        //inner join faixa on musica.identificador=faixa.musica_identificador
-        //WHERE musica.identificador=13
         String sqlSelectIfAlbumDeMusica = "SELECT album_nome FROM musica " +
                 "inner join faixa on musica.identificador=faixa.musica_identificador " +
                 "WHERE musica.identificador=(?)";
@@ -458,6 +489,16 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Recupera o nome do álbum associado a um determinado identificador de música da base de dados.
+     * executa uma consulta SQL para buscar o nome do álbum onde o identificador de música corresponde ao parâmetro fornecido.
+     *
+     * @param identificadorMusica o identificador único da música cujo nome do álbum deve ser recuperado.
+     * Deve ser um valor positivo; caso contrário, retornará null.
+     * @return o nome do álbum como uma String se o identificador existir na base de dados, ou null se nenhum álbum for encontrado
+     * ou se o identificador for inválido.
+     * @throws SQLException se houver algum problema ao executar a consulta SQL ou conectar-se a base de dados.
+     */
     public String obterAlbumDaMusica(long identificadorMusica) throws SQLException {
         if (identificadorMusica <= 0) {
             System.out.println("Sem identificador");
@@ -833,6 +874,13 @@ public class App implements AutoCloseable {
         }
     }
 
+    /**
+     * Solicita ao utilizador para inserir uma data no formato "aaaa-MM-dd", valida a entrada,
+     * e retorna a sequência de data formatada.
+     *
+     * @param sc o objeto Scanner usado para ler a entrada do utilizador
+     * @return uma cadeia de caracteres de data formatada corretamente no formato "aaaa-MM-dd"
+     */
     public static String pedirData(Scanner sc) {
         boolean eValido;
         String dataString;
@@ -873,15 +921,6 @@ public class App implements AutoCloseable {
         Scanner sc = new Scanner(System.in);
         new App();
 
-
-
-        /*try (App app = new App()) {
-            app.consultarMusicas();
-            //adicionarMusica(String titulo, String dataLancamento, String autor, String genero, String album, int numFaixa) throws SQLException {
-            //app.gerarPlaylist("Rock", 20);
-           //app.removerMusica(16);
-        } catch (SQLException e) {
-            e.printStackTrace();*/
     }
 }
 
