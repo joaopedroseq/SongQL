@@ -353,11 +353,54 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 System.out.println("Música removida com sucesso.");
             }
         }
-    } // Falta a parte de remover o album se estiver vazio
-
-    public void obterPlaylist(  String generoPlaylist, int numMusicas) throws SQLException {
-
     }
+
+
+    /**
+     * Gera uma playlist temporária com músicas de um género específico e exibe as informações
+     * das músicas selecionadas. A seleção das músicas é feita de forma aleatória e limitada
+     * ao número especificado pelo utilizador. Quando a sessão é fechada o albúm é removido.
+     *
+     * @param generoEscolhido O género das músicas que devem compor a playlist.
+     * @param numeroMusicas O número máximo de músicas a serem incluídas na playlist.
+     * @throws SQLException Se ocorrer um erro de acesso à base de dados durante a execução da operação.
+     */
+    public void gerarPlaylist(String generoEscolhido, int numeroMusicas) throws SQLException {
+
+        String sql = "CREATE TEMP TABLE temp_playlist AS " +
+                "SELECT musica.identificador, musica.titulo, musica.data_criacao, musica.autor_nome, genero.nome AS genero_nome " +
+                "FROM musica " +
+                "INNER JOIN autor ON musica.autor_nome = autor.nome " +
+                "INNER JOIN musica_genero ON musica.identificador = musica_genero.musica_identificador " +
+                "INNER JOIN genero ON musica_genero.genero_nome = genero.nome " +
+                "WHERE genero.nome = ? " +
+                "ORDER BY RANDOM() " +
+                "LIMIT ?;";
+
+        try (PreparedStatement stm = conn.prepareStatement(sql)) {
+            stm.setString(1, generoEscolhido);
+            stm.setInt(2, numeroMusicas);
+            stm.executeUpdate();
+
+            String selectSql = "SELECT * FROM temp_playlist";
+            try (PreparedStatement selectStm = conn.prepareStatement(selectSql);
+                 ResultSet rs = selectStm.executeQuery()) {
+                while (rs.next()) {
+                    System.out.println("ID: " + rs.getString("identificador") +
+                            " Título: " + rs.getString("titulo") +
+                            " Data: " + rs.getString("data_criacao") +
+                            " Autor: " + rs.getString("autor_nome") +
+                            " Género: " + rs.getString("genero_nome"));
+                }
+            }
+        }
+        // Remove a tabela temporária
+        String sqlDrop = "DROP TABLE temp_playlist;";
+        try (PreparedStatement stmDrop = conn.prepareStatement(sqlDrop)) {
+            stmDrop.executeUpdate();
+        }
+    }
+
 
 
     /**
@@ -451,7 +494,7 @@ left outer join faixa on musica.identificador = faixa.musica_identificador*/
                 System.out.println("Digite o número de músicas para a playlist:");
                 int numMusicas = Integer.parseInt(sc.nextLine());
                 try {
-                    app.obterPlaylist(generoPlaylist, numMusicas);
+                    app.gerarPlaylist(generoPlaylist, numMusicas);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
