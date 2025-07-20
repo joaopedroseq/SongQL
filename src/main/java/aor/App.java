@@ -128,22 +128,7 @@ public class App implements AutoCloseable {
 
             //INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES
             //('Let It Be', '1970-03-06', 'The Beatles'),
-            String sql = "INSERT INTO musica (titulo, data_criacao, autor_nome) VALUES" +
-                    "((?), (?), (?));" +
-                    "INSERT INTO musica_genero (musica_identificador, genero_nome) VALUES" +
-                    "((SELECT last_value FROM musica_identificador_seq), (?));";
-            try (PreparedStatement stm = conn.prepareStatement(sql)) {
-                stm.setString(1, titulo);
-                stm.setDate(2, dataLancamentoSql);
-                stm.setString(3, autor);
-                stm.setString(4, genero);
-                int createdMusic = stm.executeUpdate();
-                if (createdMusic == 0) {
-                    System.out.println("Música não criada");
-                } else {
-                    System.out.println("Música criada");
-                }
-            }
+
             if (musicaComAlbum) {
                 if (criarFaixa(numFaixa, album)) {
                     operacaoComSucesso = true;
